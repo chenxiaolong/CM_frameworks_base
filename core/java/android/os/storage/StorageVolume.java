@@ -45,6 +45,7 @@ public class StorageVolume implements Parcelable {
     private final long mMaxFileSize;
     /** When set, indicates exclusive ownership of this volume */
     private final UserHandle mOwner;
+    private final boolean mExternalSd;
 
     // StorageVolume extra for ACTION_MEDIA_REMOVED, ACTION_MEDIA_UNMOUNTED, ACTION_MEDIA_CHECKING,
     // ACTION_MEDIA_NOFS, ACTION_MEDIA_MOUNTED, ACTION_MEDIA_SHARED, ACTION_MEDIA_UNSHARED,
@@ -63,6 +64,22 @@ public class StorageVolume implements Parcelable {
         mAllowMassStorage = allowMassStorage;
         mMaxFileSize = maxFileSize;
         mOwner = owner;
+        mExternalSd = false;
+    }
+
+    public StorageVolume(File path, int descriptionId, boolean primary, boolean removable,
+            boolean emulated, int mtpReserveSpace, boolean allowMassStorage, long maxFileSize,
+            UserHandle owner, boolean externalSd) {
+        mPath = path;
+        mDescriptionId = descriptionId;
+        mPrimary = primary;
+        mRemovable = removable;
+        mEmulated = emulated;
+        mMtpReserveSpace = mtpReserveSpace;
+        mAllowMassStorage = allowMassStorage;
+        mMaxFileSize = maxFileSize;
+        mOwner = owner;
+        mExternalSd = externalSd;
     }
 
     private StorageVolume(Parcel in) {
@@ -76,12 +93,13 @@ public class StorageVolume implements Parcelable {
         mAllowMassStorage = in.readInt() != 0;
         mMaxFileSize = in.readLong();
         mOwner = in.readParcelable(null);
+        mExternalSd = in.readInt() != 0;
     }
 
     public static StorageVolume fromTemplate(StorageVolume template, File path, UserHandle owner) {
         return new StorageVolume(path, template.mDescriptionId, template.mPrimary,
                 template.mRemovable, template.mEmulated, template.mMtpReserveSpace,
-                template.mAllowMassStorage, template.mMaxFileSize, owner);
+                template.mAllowMassStorage, template.mMaxFileSize, owner, template.mExternalSd);
     }
 
     /**
@@ -130,6 +148,15 @@ public class StorageVolume implements Parcelable {
      */
     public boolean isEmulated() {
         return mEmulated;
+    }
+
+    /**
+     * Returns true if the volume is the external SD card.
+     *
+     * @return is external SD
+     */
+    public boolean isExternalSd() {
+        return mExternalSd;
     }
 
     /**
@@ -216,6 +243,7 @@ public class StorageVolume implements Parcelable {
         builder.append(" mAllowMassStorage=").append(mAllowMassStorage);
         builder.append(" mMaxFileSize=").append(mMaxFileSize);
         builder.append(" mOwner=").append(mOwner);
+        builder.append(" mExternalSd=").append(mExternalSd);
         builder.append("]");
         return builder.toString();
     }
@@ -249,5 +277,6 @@ public class StorageVolume implements Parcelable {
         parcel.writeInt(mAllowMassStorage ? 1 : 0);
         parcel.writeLong(mMaxFileSize);
         parcel.writeParcelable(mOwner, flags);
+        parcel.writeInt(mExternalSd ? 1 : 0);
     }
 }

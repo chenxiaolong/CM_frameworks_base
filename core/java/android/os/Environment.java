@@ -273,6 +273,69 @@ public class Environment {
         }
     }
 
+    private static StorageVolume getExternalSdVolume() {
+        try {
+            IMountService mountService = IMountService.Stub.asInterface(ServiceManager
+                    .getService("mount"));
+            final StorageVolume[] volumes = mountService.getVolumeList();
+            for (StorageVolume volume : volumes) {
+                if (volume.isExternalSd()) {
+                    Log.v(TAG, "Found external SD volume: " + volume.getPath());
+                    return volume;
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "couldn't talk to MountService", e);
+        }
+        return null;
+    }
+
+    public static boolean isExternalSdAvailableAndMounted() {
+        if (getExternalSdVolume() != null) {
+            Log.v(TAG, "isExternalSdAvailableAndMounted: SD card is available");
+            String state = getExternalSdState();
+            Log.v(TAG, "isExternalSdAvailableAndMounted: SD card state: " + state);
+            if (state.equals(MEDIA_MOUNTED)) {
+                final File temp = new File("/data/system/no-external-apps");
+                if (temp.exists()) {
+                    Log.v(TAG, "isExternalSdAvailableAndMounted: Application moving was explicitly disabled");
+                    return false;
+                }
+                return true;
+            }
+        } else {
+            Log.v(TAG, "isExternalSdAvailableAndMounted: SD card is NOT available");
+        }
+        return false;
+    }
+
+    /**
+     * Gets the current state of the external SD card.
+     *
+     * @see #getExternalSdDirectory()
+     */
+    public static String getExternalSdState() {
+        try {
+            IMountService mountService = IMountService.Stub.asInterface(ServiceManager
+                    .getService("mount"));
+            return mountService.getVolumeState(getExternalSdVolume().getPath());
+        } catch (RemoteException rex) {
+            Log.w(TAG, "Failed to read external SD state; assuming REMOVED: " + rex);
+            return Environment.MEDIA_REMOVED;
+        }
+    }
+
+    /**
+     * Gets the external SD card directory
+     */
+    public static File getExternalSdDirectory() {
+        StorageVolume volume = getExternalSdVolume();
+        if (volume != null) {
+          return new File(volume.getPath());
+        }
+        return null;
+    }
+
     /**
      * Return directory used for internal media storage, which is protected by
      * {@link android.Manifest.permission#WRITE_MEDIA_STORAGE}.
