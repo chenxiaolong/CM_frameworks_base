@@ -5,3 +5,6 @@
 
 * app2sd
     - 84311e99c07669ff7ad27db7f140d2cf5f654033
+
+* Additional gerrit commits
+    - http://review.cyanogenmod.org/#/c/55072/ (At PS1)
