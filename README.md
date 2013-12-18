@@ -8,3 +8,4 @@
 
 * Additional gerrit commits
     - http://review.cyanogenmod.org/#/c/53829/ (At PS15)
+    - http://review.cyanogenmod.org/#/c/55977/ (At PS2)
