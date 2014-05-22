@@ -79,7 +79,6 @@ import android.util.Slog;
 import android.view.Display;
 import android.view.IWindowManager;
 import android.view.WindowManagerGlobal;
-import com.android.internal.app.ActivityTrigger;
 
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
