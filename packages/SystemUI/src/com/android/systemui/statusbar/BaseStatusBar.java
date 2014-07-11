@@ -22,12 +22,18 @@ import android.app.Notification;
 import android.app.PendingIntent;
 import android.app.TaskStackBuilder;
 import android.app.admin.DevicePolicyManager;
-import android.content.*;
+import android.content.BroadcastReceiver;
+import android.content.ComponentName;
+import android.content.ContentResolver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.IPackageDataObserver;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.content.res.Configuration;
+import android.content.res.ThemeConfig;
 import android.database.ContentObserver;
 import android.graphics.Rect;
 import android.net.Uri;
@@ -166,7 +172,10 @@ public abstract class BaseStatusBar extends SystemUI implements
 
     private RecentsComponent mRecents;
 
-    private int mExpandedDesktopStyle = 0;
+    private ArrayList<String> mDndList;
+    private ArrayList<String> mBlacklist;
+
+    protected int mExpandedDesktopStyle = 0;
 
     public IStatusBarService getStatusBarService() {
         return mBarService;
@@ -195,6 +204,12 @@ public abstract class BaseStatusBar extends SystemUI implements
 
         public void observe() {
             ContentResolver resolver = mContext.getContentResolver();
+            resolver.registerContentObserver(
+                    Settings.System.getUriFor(Settings.System.HEADS_UP_CUSTOM_VALUES),
+                    false, this);
+            resolver.registerContentObserver(
+                    Settings.System.getUriFor(Settings.System.HEADS_UP_BLACKLIST_VALUES),
+                    false, this);
             resolver.registerContentObserver(Settings.System.getUriFor(
                     Settings.System.STATUS_BAR_COLLAPSE_ON_DISMISS), false, this);
             resolver.registerContentObserver(Settings.System.getUriFor(
@@ -218,8 +233,14 @@ public abstract class BaseStatusBar extends SystemUI implements
             if (Settings.System.getIntForUser(resolver,
                     Settings.System.EXPANDED_DESKTOP_STATE, 0, UserHandle.USER_CURRENT) != 0) {
                 mExpandedDesktopStyle = Settings.System.getIntForUser(mContext.getContentResolver(),
-                        Settings.System.EXPANDED_DESKTOP_STYLE, 0, UserHandle.USER_CURRENT);
+                        Settings.System.EXPANDED_DESKTOP_STYLE, 2, UserHandle.USER_CURRENT);
             }
+            final String dndString = Settings.System.getString(mContext.getContentResolver(),
+                    Settings.System.HEADS_UP_CUSTOM_VALUES);
+            final String blackString = Settings.System.getString(mContext.getContentResolver(),
+                    Settings.System.HEADS_UP_BLACKLIST_VALUES);
+            splitAndAddToArrayList(mDndList, dndString, "\\|");
+            splitAndAddToArrayList(mBlacklist, blackString, "\\|");
         }
     };
 
@@ -277,6 +298,9 @@ public abstract class BaseStatusBar extends SystemUI implements
         mDreamManager = IDreamManager.Stub.asInterface(
                 ServiceManager.checkService(DreamService.DREAM_SERVICE));
         mPowerManager = (PowerManager) mContext.getSystemService(Context.POWER_SERVICE);
+
+        mDndList = new ArrayList<String>();
+        mBlacklist = new ArrayList<String>();
 
         mProvisioningObserver.onChange(false); // set up
         mContext.getContentResolver().registerContentObserver(
@@ -761,10 +785,15 @@ public abstract class BaseStatusBar extends SystemUI implements
 
         View contentViewLocal = null;
         View bigContentViewLocal = null;
+        final ThemeConfig themeConfig = mContext.getResources().getConfiguration().themeConfig;
+        String themePackageName = themeConfig != null ?
+                themeConfig.getOverlayPkgNameForApp(mContext.getPackageName()) : null;
         try {
-            contentViewLocal = contentView.apply(mContext, adaptive, mOnClickHandler);
+            contentViewLocal = contentView.apply(mContext, adaptive, mOnClickHandler,
+                    themePackageName);
             if (bigContentView != null) {
-                bigContentViewLocal = bigContentView.apply(mContext, adaptive, mOnClickHandler);
+                bigContentViewLocal = bigContentView.apply(mContext, adaptive, mOnClickHandler,
+                        themePackageName);
             }
         }
         catch (RuntimeException e) {
@@ -1177,6 +1206,11 @@ public abstract class BaseStatusBar extends SystemUI implements
     protected boolean shouldInterrupt(StatusBarNotification sbn) {
         Notification notification = sbn.getNotification();
 
+        // check if notification from the package is blacklisted first
+        if (isPackageBlacklisted(sbn.getPackageName())) {
+            return false;
+        }
+
         // some predicates to make the boolean logic legible
         boolean isNoisy = (notification.defaults & Notification.DEFAULT_SOUND) != 0
                 || (notification.defaults & Notification.DEFAULT_VIBRATE) != 0
@@ -1215,7 +1249,7 @@ public abstract class BaseStatusBar extends SystemUI implements
         if (!isHighPriority && keyguardNotVisible && !isOngoing && !isIMEShowing) {
             // However, we don't want to interrupt if we're in an application that is
             // in Do Not Disturb
-            if(!isPackageInDnd(getTopLevelPackage())) {
+            if (!isPackageInDnd(getTopLevelPackage())) {
                 return true;
             }
         }
@@ -1227,28 +1261,29 @@ public abstract class BaseStatusBar extends SystemUI implements
     private String getTopLevelPackage() {
         final ActivityManager am = (ActivityManager)
                 mContext.getSystemService(Context.ACTIVITY_SERVICE);
-        List< ActivityManager.RunningTaskInfo > taskInfo = am.getRunningTasks(1);
+        List<ActivityManager.RunningTaskInfo > taskInfo = am.getRunningTasks(1);
         ComponentName componentInfo = taskInfo.get(0).topActivity;
         return componentInfo.getPackageName();
     }
 
     private boolean isPackageInDnd(String packageName) {
-        final String baseString = Settings.System.getString(mContext.getContentResolver(),
-                Settings.System.HEADS_UP_CUSTOM_VALUES);
+        return mDndList.contains(packageName);
+    }
 
+    private boolean isPackageBlacklisted(String packageName) {
+        return mBlacklist.contains(packageName);
+    }
+
+    private void splitAndAddToArrayList(ArrayList<String> arrayList,
+                                        String baseString, String separator) {
+        // clear first
+        arrayList.clear();
         if (baseString != null) {
-            final String[] array = TextUtils.split(baseString, "\\|");
+            final String[] array = TextUtils.split(baseString, separator);
             for (String item : array) {
-                if (TextUtils.isEmpty(item)) {
-                    continue;
-                }
-                if (TextUtils.equals(item, packageName)) {
-                    return true;
-                }
+                arrayList.add(item.trim());
             }
         }
-
-        return false;
     }
 
     // Q: What kinds of notifications should show during setup?

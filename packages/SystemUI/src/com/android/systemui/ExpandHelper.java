@@ -411,8 +411,12 @@ public class ExpandHelper implements Gefingerpoken, OnClickListener {
             }
 
             case MotionEvent.ACTION_DOWN:
-                mWatchingForPull = (isInside(mScrollView, x, y) || mForcedOneFinger);
+                final boolean inside = isInside(mScrollView, x, y);
+                mWatchingForPull = (inside || mForcedOneFinger);
                 mLastMotionY = y;
+                if (inside) {
+                    mInitialTouchY = y;
+                }
                 break;
 
             case MotionEvent.ACTION_CANCEL:
@@ -510,7 +514,6 @@ public class ExpandHelper implements Gefingerpoken, OnClickListener {
         }
         mExpanding = true;
         if (DEBUG) Log.d(TAG, "scale type " + expandType + " beginning on view: " + v);
-        mCallback.setUserLockedChild(v, true);
         setView(v);
         setGlow(GLOW_BASE);
         mScaler.setView(v);
@@ -522,9 +525,14 @@ public class ExpandHelper implements Gefingerpoken, OnClickListener {
             if (DEBUG) Log.d(TAG, "working on a non-expandable child");
             mNaturalHeight = mOldHeight;
         }
+        mCallback.setUserLockedChild(v, true);
         if (DEBUG) Log.d(TAG, "got mOldHeight: " + mOldHeight +
                     " mNaturalHeight: " + mNaturalHeight);
         v.getParent().requestDisallowInterceptTouchEvent(true);
+    }
+
+    public float getNaturalHeight() {
+        return mNaturalHeight;
     }
 
     private void finishExpanding(boolean force) {
