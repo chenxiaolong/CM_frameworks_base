@@ -48,7 +48,6 @@ public class StorageVolume implements Parcelable {
     private final long mMaxFileSize;
     /** When set, indicates exclusive ownership of this volume */
     private final UserHandle mOwner;
-    private final boolean mExternalSd;
 
     private String mUuid;
     private String mUserLabel;
@@ -71,22 +70,6 @@ public class StorageVolume implements Parcelable {
         mAllowMassStorage = allowMassStorage;
         mMaxFileSize = maxFileSize;
         mOwner = owner;
-        mExternalSd = false;
-    }
-
-    public StorageVolume(File path, int descriptionId, boolean primary, boolean removable,
-            boolean emulated, int mtpReserveSpace, boolean allowMassStorage, long maxFileSize,
-            UserHandle owner, boolean externalSd) {
-        mPath = path;
-        mDescriptionId = descriptionId;
-        mPrimary = primary;
-        mRemovable = removable;
-        mEmulated = emulated;
-        mMtpReserveSpace = mtpReserveSpace;
-        mAllowMassStorage = allowMassStorage;
-        mMaxFileSize = maxFileSize;
-        mOwner = owner;
-        mExternalSd = externalSd;
     }
 
     private StorageVolume(Parcel in) {
@@ -103,13 +86,12 @@ public class StorageVolume implements Parcelable {
         mUuid = in.readString();
         mUserLabel = in.readString();
         mState = in.readString();
-        mExternalSd = in.readInt() != 0;
     }
 
     public static StorageVolume fromTemplate(StorageVolume template, File path, UserHandle owner) {
         return new StorageVolume(path, template.mDescriptionId, template.mPrimary,
                 template.mRemovable, template.mEmulated, template.mMtpReserveSpace,
-                template.mAllowMassStorage, template.mMaxFileSize, owner, template.mExternalSd);
+                template.mAllowMassStorage, template.mMaxFileSize, owner);
     }
 
     /**
@@ -158,15 +140,6 @@ public class StorageVolume implements Parcelable {
      */
     public boolean isEmulated() {
         return mEmulated;
-    }
-
-    /**
-     * Returns true if the volume is the external SD card.
-     *
-     * @return is external SD
-     */
-    public boolean isExternalSd() {
-        return mExternalSd;
     }
 
     /**
@@ -302,7 +275,6 @@ public class StorageVolume implements Parcelable {
         pw.printPair("mUuid", mUuid);
         pw.printPair("mUserLabel", mUserLabel);
         pw.printPair("mState", mState);
-        pw.printPair("mExternalSd", mExternalSd);
         pw.decreaseIndent();
     }
 
@@ -338,6 +310,5 @@ public class StorageVolume implements Parcelable {
         parcel.writeString(mUuid);
         parcel.writeString(mUserLabel);
         parcel.writeString(mState);
-        parcel.writeInt(mExternalSd ? 1 : 0);
     }
 }

@@ -1479,9 +1479,6 @@
          config to 7. -->
     <integer name="config_deviceHardwareKeys">15</integer>
 
-    <!-- True if the Irda service should be started at system start -->
-    <bool name="config_enableIrdaManagerService">false</bool>
-
     <!-- Indicates that the device has Single-stage Camera key
          (without "Focus" state) instead of Dual-stage. -->
     <bool name="config_singleStageCameraKey">false</bool>

@@ -2481,9 +2481,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                     R.integer.def_send_action_app_error);
 
             // --- New global settings start here
-            loadIntegerSetting(stmt, Settings.Global.TETHER_DUN_REQUIRED,
-                    R.integer.def_tether_dun_required);
-
             loadQuickBootSetting(db);
 
         } finally {

@@ -884,16 +884,6 @@ class ServerThread {
                 }
             }
 
-            if (context.getResources().getBoolean(
-                    com.android.internal.R.bool.config_enableIrdaManagerService)) {
-                try {
-                    Slog.i(TAG, "IrdaManager Service");
-                    ServiceManager.addService("irda", new IrdaManagerService(context));
-                } catch (Throwable e) {
-                    reportWtf("starting IrdaManager Service", e);
-                }
-            }
-
             if (!disableNonCoreServices) {
                 try {
                     Slog.i(TAG, "Assets Atlas Service");
